@@ -33,9 +33,23 @@ jobs:
           password: ${{ secrets.DOCKER_PW }}
 
       - name: Build Docker image
-        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/app-fe:latest .
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/app-fe:${{ github.sha }} .
       - name: Push Docker image
-        run: docker push ${{ secrets.DOCKER_USERNAME }}/app-fe:latest     
+        run: docker push ${{ secrets.DOCKER_USERNAME }}/app-fe:${{ github.sha }} 
+
+      - name: Update CD repo
+        run: |
+          git clone https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/aksh76120/app-fe-cd.git
+          cd app-fe-cd
+
+          sed -i "s|image: .*|image: ${{ secrets.DOCKER_USERNAME }}/app-fe:${{ github.sha }}|g" deployment.yaml
+
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+
+          git add .
+          git commit -m "Update image to ${{ github.sha }}" || echo "No changes"
+          git push
 
 
      
