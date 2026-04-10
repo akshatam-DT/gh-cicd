@@ -40,7 +40,7 @@ jobs:
       - name: Update CD repo
         run: |
           git clone https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/akshatam-DT/gh-cd.git
-          cd app-fe-cd
+          cd gh-cd
 
           sed -i "s|image: .*|image: ${{ secrets.DOCKER_USERNAME }}/app-fe:${{ github.sha }}|g" deployment.yaml
 
