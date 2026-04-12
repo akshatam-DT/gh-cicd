@@ -57,26 +57,24 @@ jobs:
 
       - name: Update CD Repository
         run: |
-          # 1. Clone the CD repository using your Personal Access Token
-          # This clones the repo into a folder called 'temp-cd'
           git clone https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/akshatam-DT/gh-cd.git temp-cd
-          
-          # 2. Change directory into the cloned repo
           cd temp-cd
           
-          # 3. Use sed to replace the placeholder with the actual GitHub SHA
-          # Since your file is in the root, we reference it directly
-          sed -i "s|IMAGE_TAG|${{ github.sha }}|g" deployment.yaml
+          # This regex finds the line starting with 'image:' and replaces everything after the ':' 
+          # with your new image and the new SHA tag.
+          sed -i "s|image:.*|image: ${{ secrets.DOCKER_USERNAME }}/app-fe:${{ github.sha }}|g" deployment.yaml
 
-          # 4. Setup Git identity for the commit
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
 
-          # 5. Commit and Push the change back to the gh-cd repo
-          git add deployment.yaml
-          git commit -m "Update image tag to ${{ github.sha }} [skip ci]"
-          git push
-
+          # Only commit if there are actual changes to avoid the Exit Code 1 error
+          if [ -n "$(git status --porcelain)" ]; then
+            git add deployment.yaml
+            git commit -m "Update image tag to ${{ github.sha }} [skip ci]"
+            git push
+          else
+            echo "No changes detected in deployment.yaml"
+          fi
 
      
       
