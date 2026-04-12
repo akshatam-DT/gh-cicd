@@ -59,7 +59,7 @@ jobs:
         run: |
           # 1. Clone the CD repository using your Personal Access Token
           # This clones the repo into a folder called 'temp-cd'
-          git clone https://x-access-token:${{ secrets.GH_PAT }}@github.com/akshatam-DT/gh-cd.git temp-cd
+          git clone https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/akshatam-DT/gh-cd.git temp-cd
           
           # 2. Change directory into the cloned repo
           cd temp-cd
