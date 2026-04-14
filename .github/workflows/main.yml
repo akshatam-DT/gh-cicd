@@ -1,15 +1,20 @@
-name: CI-CD Pipeline (Vite React SaaS)
+name: CI-CD Pipeline (Xora)
 
 on:
   push:
     branches: [ "main" ]
 
 jobs:
+
+  # =========================
+  # 1️⃣ BUILD REACT APP
+  # =========================
   build:
-    runs-on: ubuntu-latest   
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.tag.outputs.image_tag }}
 
     steps:
-
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -17,20 +22,31 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          
+
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
-        
-     
-      # - name: Build and analyze
-      #   uses: SonarSource/sonarqube-scan-action@v6
-      #   env:
-      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      #     SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-  
-        
+
       - name: Build React App
         run: npm run build
+
+      - name: Generate image tag
+        id: tag
+        run: echo "image_tag=${{ github.run_number }}" >> $GITHUB_OUTPUT
+
+
+  # =========================
+  # 2️⃣ BUILD DOCKER IMAGE
+  # =========================
+  docker_build:
+    runs-on: ubuntu-latest
+    needs: build
+    outputs:
+      image: ${{ steps.img.outputs.image }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -38,38 +54,72 @@ jobs:
           password: ${{ secrets.DOCKER_PW }}
 
       - name: Build Docker image
-        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/xora:xora-v${{ github.run_number }} .
+        id: img
+        run: |
+          IMAGE=${{ secrets.DOCKER_USERNAME }}/xora:xora-v${{ needs.build.outputs.image_tag }}
+          docker build -t $IMAGE .
+          echo "image=$IMAGE" >> $GITHUB_OUTPUT
 
+
+  # =========================
+  # 3️⃣ TRIVY SCAN
+  # =========================
+  scan:
+    runs-on: ubuntu-latest
+    needs: docker_build
+
+    steps:
       - name: Trivy Image Scan
         uses: aquasecurity/trivy-action@master
         with:
-           image-ref:  ${{ secrets.DOCKER_USERNAME }}/xora:xora-v${{ github.run_number }}
-           format: table
-           exit-code: 0
-           severity: CRITICAL,HIGH
+          image-ref: ${{ needs.docker_build.outputs.image }}
+          format: table
+          exit-code: 0
+          severity: CRITICAL,HIGH
 
-         
+
+  # =========================
+  # 4️⃣ PUSH IMAGE
+  # =========================
+  push:
+    runs-on: ubuntu-latest
+    needs: docker_build
+
+    steps:
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PW }}
+
       - name: Push Docker image
-        run: docker push ${{ secrets.DOCKER_USERNAME }}/xora:xora-v${{ github.run_number }}
+        run: docker push ${{ needs.docker_build.outputs.image }}
 
-      - name: Update CD Repository
+
+  # =========================
+  # 5️⃣ DEPLOY / UPDATE CD
+  # =========================
+  deploy:
+    runs-on: ubuntu-latest
+    needs: push
+
+    steps:
+      - name: Clone CD repo
         run: |
           git clone https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/akshatam-DT/gh-cd.git temp-cd
           cd temp-cd
-          IMAGE="${{ secrets.DOCKER_USERNAME }}/xora:xora-v${{ github.run_number }}"
-          
-          # This regex finds the line starting with 'image:' and replaces everything after the ':' 
-          # with your new image and the new SHA tag.
+
+          IMAGE="${{ needs.docker_build.outputs.image }}"
+
           sed -i "s|image:.*|image: ${IMAGE}|g" deployment.yaml
 
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
 
-          # Only commit if there are actual changes to avoid the Exit Code 1 error
           if [ -n "$(git status --porcelain)" ]; then
             git add deployment.yaml
-            git commit -m "Update xora image to xora-v${{ github.run_number }} [skip ci]"
+            git commit -m "Update xora image to ${IMAGE} [skip ci]"
             git push
           else
-            echo "No changes detected in deployment.yaml"
+            echo "No changes detected"
           fi
