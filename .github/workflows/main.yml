@@ -38,20 +38,20 @@ jobs:
           password: ${{ secrets.DOCKER_PW }}
 
       - name: Build Docker image
-        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/app-fe:${{ github.sha }} .
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/xora:xora-v${{ github.run_number }} .
 
       - name: Trivy Image Scan
         uses: aquasecurity/trivy-action@master
         with:
-           image-ref: ${{ secrets.DOCKER_USERNAME }}/app-fe:${{ github.sha }}
+           image-ref: ${{ secrets.DOCKER_USERNAME }}/xora:xora-v${{ github.run_number }}
            format: table
            exit-code: 0
            severity: CRITICAL,HIGH
 
          
       - name: Push Docker image
-        run: docker push ${{ secrets.DOCKER_USERNAME }}/app-fe:${{ github.sha }} 
-
+        run:  docker push ${{ secrets.DOCKER_USERNAME }}/xora:xora-v${{ github.run_number }}
+        
       - name: Update CD Repository
         run: |
           git clone https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/akshatam-DT/gh-cd.git temp-cd
@@ -59,7 +59,7 @@ jobs:
           
           # This regex finds the line starting with 'image:' and replaces everything after the ':' 
           # with your new image and the new SHA tag.
-          sed -i "s|image:.*|image: ${{ secrets.DOCKER_USERNAME }}/app-fe:${{ github.sha }}|g" deployment.yaml
+          sed -i "s|image:.*|image: ${{ secrets.DOCKER_USERNAME }}/xora:xora-v${{ github.run_number }}|g" deployment.yaml
 
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
@@ -67,7 +67,7 @@ jobs:
           # Only commit if there are actual changes to avoid the Exit Code 1 error
           if [ -n "$(git status --porcelain)" ]; then
             git add deployment.yaml
-            git commit -m "Update image tag to ${{ github.sha }} [skip ci]"
+            git commit -m "Update xora image to xora-v${{ github.run_number }} [skip ci]"
             git push
           else
             echo "No changes detected in deployment.yaml"
