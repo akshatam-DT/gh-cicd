@@ -25,7 +25,6 @@ jobs:
         with:
           image-ref: ${{ secrets.DOCKER_USERNAME }}/xora:xora-v${{ github.run_number }}
           format: table
-          exit-code: 0
           severity: CRITICAL,HIGH
 
       - name: Set up Docker Buildx
