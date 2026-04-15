@@ -2,12 +2,12 @@ name: CI-CD Pipeline (Vite React SaaS)
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   # 1. BUILD JOB
   build:
-    runs-on: self-hosted  
+    runs-on: self-hosted
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -16,7 +16,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          
+
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
@@ -27,7 +27,7 @@ jobs:
   #   steps:
   #     - name: Checkout code
   #       uses: actions/checkout@v4
-
+  #
   #     - name: Build and analyze
   #       uses: SonarSource/sonarqube-scan-action@v6
   #       env:
@@ -36,11 +36,14 @@ jobs:
 
   # 3. DOCKER JOB
   docker:
-    # needs: test
+    needs: build
     runs-on: self-hosted
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -48,19 +51,28 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PW }}
 
+      # ✅ 1. Build image (no push)
       - name: Build Docker image
-        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/xora:xora-v${{ github.run_number }} .
-
-      - name: Trivy Image Scan
-        uses: aquasecurity/trivy-action@master
+        uses: docker/build-push-action@v6
         with:
-           image-ref: ${{ secrets.DOCKER_USERNAME }}/xora:xora-v${{ github.run_number }}
-           format: table
-           exit-code: 0
-           severity: CRITICAL,HIGH
+          context: .
+          load: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/xora:xora-v${{ github.run_number }}
 
+      # ✅ 2. Scan with Trivy
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: ${{ secrets.DOCKER_USERNAME }}/xora:xora-v${{ github.run_number }}
+          format: table
+          exit-code: 1
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+
+      # ✅ 3. Push image ONLY if scan passes
       - name: Push Docker image
-        run: docker push ${{ secrets.DOCKER_USERNAME }}/xora:xora-v${{ github.run_number }}
+        run: |
+          docker push ${{ secrets.DOCKER_USERNAME }}/xora:xora-v${{ github.run_number }}
 
   # 4. DEPLOY JOB
   deploy:
@@ -72,7 +84,7 @@ jobs:
           git clone https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/akshatam-DT/gh-cd.git temp-cd
           cd temp-cd
           IMAGE="${{ secrets.DOCKER_USERNAME }}/xora:xora-v${{ github.run_number }}"
-          
+
           sed -i "s|image:.*|image: ${IMAGE}|g" deployment.yaml
 
           git config --global user.name "github-actions"
