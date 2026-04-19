@@ -6,37 +6,37 @@ on:
 
 jobs:
   # 1. BUILD JOB
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install dependencies
-        run: npm ci --legacy-peer-deps
-
-  # 2. TEST JOB (SonarQube)
-  # test:
-  #   needs: build
-  #   runs-on: self-hosted
+  # build:
+  #   runs-on: ubuntu-latest
   #   steps:
   #     - name: Checkout code
   #       uses: actions/checkout@v4
-  #
-  #     - name: Build and analyze
-  #       uses: SonarSource/sonarqube-scan-action@v6
-  #       env:
-  #         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-  #         SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+  #     - name: Setup Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 20
+
+  #     - name: Install dependencies
+  #       run: npm ci --legacy-peer-deps
+
+
+  test:
+    # needs: build
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+  
+      - name: Build and analyze
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
   # 3. DOCKER JOB
   docker:
-    needs: build
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
