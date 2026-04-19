@@ -7,7 +7,7 @@ on:
 jobs:
   # 1. BUILD JOB
   build:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -37,7 +37,7 @@ jobs:
   # 3. DOCKER JOB
   docker:
     needs: build
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -77,7 +77,7 @@ jobs:
   # 4. DEPLOY JOB
   deploy:
     needs: docker
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - name: Update CD Repository
         run: |
