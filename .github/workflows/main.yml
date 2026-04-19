@@ -61,7 +61,7 @@ jobs:
 
       # ✅ 2. Scan with Trivy
       - name: Scan image with Trivy
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: ${{ secrets.DOCKER_USERNAME }}/xora:xora-v${{ github.run_number }}
           format: table
