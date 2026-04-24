@@ -75,7 +75,7 @@ jobs:
           docker push ${{ secrets.DOCKER_USERNAME }}/xora:xora-v${{ github.run_number }}
 
   # 4. DEPLOY JOB
-  deploy:
+  update_deployment:
     needs: docker
     runs-on: ubuntu-latest
     steps:
