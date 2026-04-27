@@ -5,24 +5,8 @@ on:
     branches: ["main"]
 
 jobs:
-  # 1. BUILD job
-  # build:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
-
-  #     - name: Setup Node.js
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: 20
-
-  #     - name: Install dependencies
-  #       run: npm ci --legacy-peer-deps
-
 
   test:
-    # needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -51,7 +35,7 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PW }}
 
-      # ✅ 1. Build image (no push)
+      #  1. Build image (no push)
       - name: Build Docker image
         uses: docker/build-push-action@v6
         with:
@@ -59,7 +43,7 @@ jobs:
           load: true
           tags: ${{ secrets.DOCKER_USERNAME }}/xora:xora-v${{ github.run_number }}
 
-      # ✅ 2. Scan with Trivy
+      #  2. Scan with Trivy
       - name: Scan image with Trivy
         uses: aquasecurity/trivy-action@master
         with:
@@ -69,7 +53,7 @@ jobs:
           ignore-unfixed: true
           severity: CRITICAL,HIGH
 
-      # ✅ 3. Push image ONLY if scan passes
+      #  3. Push image ONLY if scan passes
       - name: Push Docker image
         run: |
           docker push ${{ secrets.DOCKER_USERNAME }}/xora:xora-v${{ github.run_number }}
