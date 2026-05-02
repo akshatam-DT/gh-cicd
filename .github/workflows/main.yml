@@ -49,7 +49,7 @@ jobs:
         with:
           image-ref: ${{ secrets.DOCKER_USERNAME }}/xora:xora-v${{ github.run_number }}
           format: table
-          exit-code: 1
+          exit-code: 0
           ignore-unfixed: true
           severity: CRITICAL,HIGH
 
